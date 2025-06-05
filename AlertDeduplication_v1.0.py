@@ -20,10 +20,13 @@ def get_session_token():
     Authenticate with the GLPI API and retrieve a session token.
     """
     headers = {
-        "App-Token": APP_TOKEN,
-        "Authorization": f"user_token {USER_TOKEN}"
+        "Content-Type": "application/json",
+        "App-Token": APP_TOKEN
     }
-    r = requests.get(f"{GLPI_URL}/initSession", headers=headers)
+    data = {
+        "user_token": USER_TOKEN
+    }
+    r = requests.post(f"{GLPI_URL}/initSession", headers=headers, data=json.dumps(data))
     r.raise_for_status()
     return r.json()["session_token"]
 
@@ -33,12 +36,18 @@ def find_existing_ticket(session_token, alert_hash):
     Returns the ticket ID if found, otherwise None.
     """
     headers = {
+        "Content-Type": "application/json",
         "Session-Token": session_token,
         "App-Token": APP_TOKEN
     }
     # Search for tickets where the name contains the alert hash
-    search_url = f"{GLPI_URL}/search/Ticket?criteria[0][field]=1&criteria[0][searchtype]=contains&criteria[0][value]={alert_hash}"
-    r = requests.get(search_url, headers=headers)
+    search_url = f"{GLPI_URL}/search/Ticket"
+    params = {
+        "criteria[0][field]": 1,
+        "criteria[0][searchtype]": "contains",
+        "criteria[0][value]": alert_hash
+    }
+    r = requests.get(search_url, headers=headers, params=params)
     r.raise_for_status()
     results = r.json()
     if results["totalcount"] > 0:
@@ -50,9 +59,9 @@ def create_ticket(session_token, alert_hash, alert_desc, src_ip, dst_ip, src_mac
     Create a new ticket in GLPI for the alert.
     """
     headers = {
+        "Content-Type": "application/json",
         "Session-Token": session_token,
         "App-Token": APP_TOKEN,
-        "Content-Type": "application/json"
     }
 
     ticket_data = {
