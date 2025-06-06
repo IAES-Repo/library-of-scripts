@@ -21,12 +21,11 @@ def get_session_token():
     """
     headers = {
         "Content-Type": "application/json",
-        "App-Token": APP_TOKEN
-    }
-    data = {
-        "user_token": USER_TOKEN
-    }
-    r = requests.post(f"{GLPI_URL}/initSession", headers=headers, data=json.dumps(data))
+        "App-Token": APP_TOKEN,
+        "Authorization: user_token": USER_TOKEN
+        }
+    
+    r = requests.get(f"{GLPI_URL}/initSession", headers=headers)
     r.raise_for_status()
     return r.json()["session_token"]
 
