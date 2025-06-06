@@ -22,7 +22,7 @@ def get_session_token():
     headers = {
         "Content-Type": "application/json",
         "App-Token": APP_TOKEN,
-        "Authorization: user_token": USER_TOKEN
+        "Authorization": f"user_token: {USER_TOKEN}"
         }
     
     r = requests.get(f"{GLPI_URL}/initSession", headers=headers)
