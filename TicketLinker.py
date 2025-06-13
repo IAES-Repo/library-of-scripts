@@ -146,7 +146,7 @@ class TicketLinkerGUI:
             if desc_term:
                 if idx > 0:
                     params[f"criteria[{idx}][link]"] = "AND"
-                params[f"criteria[{idx}][field]"] = 2
+                params[f"criteria[{idx}][field]"] = 21
                 params[f"criteria[{idx}][searchtype]"] = "contains"
                 params[f"criteria[{idx}][value]"] = desc_term
                 idx += 1
