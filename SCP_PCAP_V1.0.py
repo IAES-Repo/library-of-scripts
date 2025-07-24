@@ -18,7 +18,7 @@ SCP_PATH = "/mnt/nas"       # Destination path on remote server
 SCP_KEY = "/home/iaes/.ssh/Crash_rsa"  # Path to SSH private key
 
 # File monitoring configuration
-WATCH_DIRECTORY = "/PCAP"   # Local directory to monitor for files
+WATCH_DIRECTORY = "/home/iaes/PCAP"   # Local directory to monitor for files
 FILE_PREFIX = "x_"          # Only process files starting with this prefix
 DELETE_AFTER_UPLOAD = True  # Whether to delete files after successful upload
 
@@ -27,16 +27,17 @@ def watch_directory():
     Scan the watch directory for files matching the specified prefix.
     Upload matching files and optionally delete them after upload.
     """
-    # Get all files in the watch directory
-    for i in os.listdir(WATCH_DIRECTORY):
-        # Only process files that start with the specified prefix
-        if i.startswith(FILE_PREFIX):
-            file_path = os.path.join(WATCH_DIRECTORY, i)
-            upload_file(file_path)
-            
-            # Delete the file after upload if configured to do so
-            if DELETE_AFTER_UPLOAD:
-                os.remove(file_path)
+    while True:
+        # Get all files in the watch directory
+        for i in os.listdir(WATCH_DIRECTORY):
+            # Only process files that start with the specified prefix
+            if i.startswith(FILE_PREFIX):
+                file_path = os.path.join(WATCH_DIRECTORY, i)
+                upload_file(file_path)
+                
+                # Delete the file after upload if configured to do so
+                if DELETE_AFTER_UPLOAD:
+                    os.remove(file_path)
 
 def upload_file(file_path):
     """
