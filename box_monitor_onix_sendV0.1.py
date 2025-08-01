@@ -14,8 +14,8 @@ import socket
 VERSION = "0.1"
 
 # Socket config
-ONIX_IP = '10.129.47.225'
-ONIX_PORT = '60000'
+ONIX_IP = 'IP'
+ONIX_PORT = 'PORT'
 
 
 
