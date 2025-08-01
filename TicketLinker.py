@@ -4,9 +4,11 @@ import tkinter as tk
 from tkinter import messagebox
 
 # GLPI API endpoint and authentication tokens
-GLPI_URL = "http://10.129.47.230/apirest.php" # GLPI API URL
-APP_TOKEN = "E6VVwzRlmROGHnXNVdO91EQE7NPRI1tKe9NiIEse" #SOC API Token
-USER_TOKEN = "9MogIyorQOHvgxWMME4QU9sae7lZpvKdO9JhqYgt" #Post Only User Token
+
+GLPI_URL = "API URL" # GLPI API URL
+APP_TOKEN = "TOKEN" #SOC API Token
+USER_TOKEN = "TOKEN" #Post Only User Token
+
 
 def get_session_token():
     """Authenticate with the GLPI API and retrieve a session token."""
@@ -139,16 +141,23 @@ class TicketLinkerGUI:
             params = {}
             idx = 0
             if name_term:
+<<<<<<< HEAD
                 params[f"criteria[{idx}][field]"] = 1  # Name
+=======
+                params[f"criteria[{idx}][field]"] = 1
+>>>>>>> 0a16eed0dc346ff2982f9d5be8ba7efa72871eff
                 params[f"criteria[{idx}][searchtype]"] = "contains"
                 params[f"criteria[{idx}][value]"] = name_term
                 idx += 1
             if desc_term:
                 if idx > 0:
                     params[f"criteria[{idx}][link]"] = "AND"
+<<<<<<< HEAD
                 # Try all likely field ids for description/content
                 # 21: content, 4: description, 12: summary, 15: solution
                 # We'll try 21 (content) first, then fallback to 4 if no results
+=======
+>>>>>>> 0a16eed0dc346ff2982f9d5be8ba7efa72871eff
                 params[f"criteria[{idx}][field]"] = 21
                 params[f"criteria[{idx}][searchtype]"] = "contains"
                 params[f"criteria[{idx}][value]"] = desc_term
@@ -159,11 +168,16 @@ class TicketLinkerGUI:
             }
             params["forcedisplay[0]"] = "id"
             params["forcedisplay[1]"] = "name"
+<<<<<<< HEAD
             params["forcedisplay[2]"] = "21"
+=======
+            params["forcedisplay[2]"] = "2"
+>>>>>>> 0a16eed0dc346ff2982f9d5be8ba7efa72871eff
             params["range"] = "0-999"
             r = requests.get(f"{GLPI_URL}/search/Ticket", headers=headers, params=params)
             r.raise_for_status()
             results = r.json()
+<<<<<<< HEAD
             # If no results and desc_term was used, try field 4 (description)
             if not results.get("data") and desc_term:
                 idx -= 1
@@ -179,12 +193,31 @@ class TicketLinkerGUI:
                 r = requests.get(f"{GLPI_URL}/search/Ticket", headers=headers, params=params)
                 r.raise_for_status()
                 results = r.json()
+=======
+>>>>>>> 0a16eed0dc346ff2982f9d5be8ba7efa72871eff
             self.tickets = []
             ticket_entries = []
             for t in results.get("data", []):
                 ticket_data = t.get("0") if "0" in t else t
+<<<<<<< HEAD
                 ticket_id = ticket_data.get("id") or t.get("id") or ""
                 name = ticket_data.get("name") or t.get("name") or ""
+=======
+                ticket_id = (
+                    ticket_data.get("id")
+                    or ticket_data.get("2")
+                    or t.get("id")
+                    or t.get("2")
+                    or ""
+                )
+                name = (
+                    ticket_data.get("name")
+                    or ticket_data.get("1")
+                    or t.get("name")
+                    or t.get("1")
+                    or ""
+                )
+>>>>>>> 0a16eed0dc346ff2982f9d5be8ba7efa72871eff
                 if ticket_id:
                     ticket_entries.append({"id": ticket_id, "name": name})
             ticket_entries.sort(key=lambda x: int(x["id"]) if str(x["id"]).isdigit() else x["id"])
@@ -255,6 +288,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+<<<<<<< HEAD
     root.mainloop()
 
 if __name__ == "__main__":
@@ -267,3 +301,5 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     main()
+=======
+>>>>>>> 0a16eed0dc346ff2982f9d5be8ba7efa72871eff
