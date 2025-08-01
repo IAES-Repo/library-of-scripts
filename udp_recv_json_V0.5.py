@@ -96,15 +96,15 @@ chunk_size = 1024
 
 # Known sender IP addresses mapped to site names.
 SITE_NAMES = {
-    "128.196.244.206": "Site FM1",
-    "150.135.55.205": "Site FM2",
-    "128.196.151.207": "Site FM3",
+    "FM1": "Site FM1",
+    "FM2": "Site FM2",
+    "FM3": "Site FM3",
 }
 
 # For convenience, assign sender IPs to variables.
-fm1_ip = "128.196.244.206"
-fm2_ip = "150.135.55.205"
-fm3_ip = "128.196.151.207"
+fm1_ip = "FM1"
+fm2_ip = "FM2"
+fm3_ip = "FM3"
 
 # Dictionary to keep track of active sessions by sender IP.
 # Each session is a dict containing:
