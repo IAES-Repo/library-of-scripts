@@ -3,8 +3,8 @@ import socket
 import time
 
 # Socket configuration
-ONIX_IP = '10.129.47.225'  # Replace with the receiver's IP
-ONIX_PORT = 60000        # Replace with the receiver's port
+ONIX_IP = 'IP'  # Replace with the receiver's IP
+ONIX_PORT = PORT        # Replace with the receiver's port
 
 # File to send
 FILE_PATH = 'FM-1-2025-03-04-11-08-17-jsonALLConnections.json'  # Replace with the path to the file you want to send
