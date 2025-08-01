@@ -81,20 +81,20 @@ for directory in (received_dir, corrupted_dir, hashlog_dir, fm1_dir, fm2_dir, fm
 
 # Listening settings
 listen_ip = "0.0.0.0"  # Listen on all interfaces
-listen_port = 50000
+listen_port = PORT
 chunk_size = 1024
 
 # Known sender IP addresses mapped to site names.
 SITE_NAMES = {
-    "128.196.244.206": "Site FM1",
-    "150.135.55.205": "Site FM2",
-    "128.196.151.207": "Site FM3",
+    "IP1": "Site FM1",
+    "IP2": "Site FM2",
+    "IP3": "Site FM3",
 }
 
 # For convenience, assign sender IPs to variables.
-fm1_ip = "128.196.244.206"
-fm2_ip = "150.135.55.205"
-fm3_ip = "128.196.151.207"
+fm1_ip = "IP1"
+fm2_ip = "IP2"
+fm3_ip = "IP3"
 
 # Dictionary to keep track of active sessions by sender IP.
 # Each session is a dict containing:
