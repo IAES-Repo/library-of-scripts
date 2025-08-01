@@ -12,10 +12,10 @@ import os
 import subprocess
 
 # SCP connection configuration
-SCP_HOST = "10.129.47.227"  # Remote server IP address
-SCP_USER = "IAES"           # SSH username for remote server
-SCP_PATH = "/mnt/nas"       # Destination path on remote server
-SCP_KEY = "/home/iaes/.ssh/Crash_rsa"  # Path to SSH private key
+SCP_HOST = "IP_ADDRESS"  # Remote server IP address
+SCP_USER = "USER"           # SSH username for remote server
+SCP_PATH = "SCP_PATH"       # Destination path on remote server
+SCP_KEY = "KEY_PATH"  # Path to SSH private key
 
 # File monitoring configuration
 WATCH_DIRECTORY = "/home/iaes/PCAP"   # Local directory to monitor for files
