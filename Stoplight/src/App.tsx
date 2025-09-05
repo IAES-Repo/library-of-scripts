@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import './index.css'
 
@@ -40,7 +40,6 @@ const hosts: HostNode[] = [
       { id: 'json-recv', name: 'JSON Receive Code', port: ':50000', category: 'ingestion', description: 'Receives JSON payloads from field modules.', status: 'up', startup: ['Ensure dependencies installed', 'Start service: systemctl start json-recv', 'Verify listening on :50000'], logPath: '/var/log/json-recv.log', configPath: '/etc/json-recv/config.yml', docs: '/docs/json-recv.md' },
       { id: 'watch-tower', name: 'Watch Tower', category: 'ingestion', description: 'Monitoring / supervisory ingestion layer.', status: 'up', startup: ['systemctl start watchtower', 'Check health endpoint /health'], logPath: '/var/log/watchtower.log', docs: '/docs/watch-tower.md' },
       { id: 'ndjson', name: 'NDJSON Script', category: 'processing', description: 'Parses newline-delimited JSON into structured events.', status: 'up', startup: ['python3 ndjson_consumer.py &'], configPath: '/opt/ndjson/config.ini', docs: '/docs/ndjson-script.md' },
-      { id: 'filebeats', name: 'Filebeats', category: 'processing', description: 'Ship logs to log pipeline.', status: 'down', startup: ['systemctl start filebeat', 'filebeat test output'], logPath: '/var/log/filebeat/filebeat', configPath: '/etc/filebeat/filebeat.yml', docs: 'https://www.elastic.co/guide/en/beats/filebeat/current/index.html' },
       { id: 'zeek', name: 'Zeek', category: 'processing', description: 'Network security monitoring system extracting metadata from traffic.', status: 'up', startup: ['zeekctl deploy', 'zeekctl status'], logPath: '/opt/zeek/logs/current/', docs: 'https://docs.zeek.org/' },
       { id: 'suricata', name: 'Suricata', category: 'processing', description: 'IDS/IPS engine performing deep packet inspection.', status: 'up', startup: ['systemctl start suricata', 'suricata -T (config test)'], logPath: '/var/log/suricata/', configPath: '/etc/suricata/suricata.yaml', docs: 'https://docs.suricata.io/' },
       { id: 'pcap-roll', name: 'PCAP Data Rollover', category: 'handling', description: 'Rotates PCAP capture files to NAS storage.', status: 'up', startup: ['cron handles rotation automatically'], notes: 'Check disk usage weekly.', docs: '/docs/pcap-rollover.md' },
@@ -107,9 +106,66 @@ interface DrawerState {
   open: boolean
 }
 
+interface StatusUpdate {
+  id: string
+  status: 'up' | 'down'
+  timestamp: number
+  host: string
+  port: number
+}
+
 function App() {
   const [drawer, setDrawer] = useState<DrawerState>({ open: false })
   const [filter, setFilter] = useState<Category | 'all'>('all')
+  const [serviceStatus, setServiceStatus] = useState<Record<string, 'up' | 'down'>>({})
+  const [wsConnected, setWsConnected] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState<number>(0)
+
+  // WebSocket connection for real-time status updates
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8081')
+    
+    ws.onopen = () => {
+      console.log('Connected to health monitor')
+      setWsConnected(true)
+    }
+    
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data)
+        if (message.type === 'status_update') {
+          const newStatus: Record<string, 'up' | 'down'> = {}
+          message.data.forEach((update: StatusUpdate) => {
+            newStatus[update.id] = update.status
+          })
+          setServiceStatus(newStatus)
+          setLastUpdate(message.timestamp)
+          console.log('Status updated:', newStatus)
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error)
+      }
+    }
+    
+    ws.onclose = () => {
+      console.log('Disconnected from health monitor')
+      setWsConnected(false)
+    }
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error)
+      setWsConnected(false)
+    }
+    
+    return () => {
+      ws.close()
+    }
+  }, [])
+
+  // Get current service status (real-time if available, fallback to static)
+  const getServiceStatus = (service: Service): 'up' | 'down' => {
+    return serviceStatus[service.id] || service.status || 'down'
+  }
 
   const openHost = (host: HostNode) => {
     setDrawer({ host, service: undefined, open: true })
@@ -121,7 +177,7 @@ function App() {
 
   return (
     <div className="layout">
-      <Header />
+      <Header wsConnected={wsConnected} lastUpdate={lastUpdate} />
       <div className="legend">
         <span className="legend-title">Categories:</span>
         {(['all', 'ingestion', 'processing', 'handling', 'docker'] as const).map(c => (
@@ -146,34 +202,43 @@ function App() {
                   <span className="ip">{h.ip}</span>
                 </div>
                 <div className="services">
-                  {normal.map(s => (
-                    <button key={s.id} className={"service" + (s.dockerized ? ' dockerized' : '')}
-                      style={{ ['--service-color' as any]: categoryColors[s.category] }}
-                      onClick={e => { e.stopPropagation(); openService(h, s) }}>
-                      <span className={"status-icon " + (s.status || '')} aria-label={s.status === 'up' ? 'status up' : 'status down'}>{s.status === 'up' ? '✔' : '✖'}</span>
-                      <span className="svc-row"><span className="svc-name">{s.name}</span>{s.port && <span className="port inline">{s.port}</span>}</span>
-                    </button>
-                  ))}
+                  {normal.map(s => {
+                    const currentStatus = getServiceStatus(s)
+                    return (
+                      <button key={s.id} className={"service" + (s.dockerized ? ' dockerized' : '')}
+                        style={{ ['--service-color' as any]: categoryColors[s.category] }}
+                        onClick={e => { e.stopPropagation(); openService(h, s) }}>
+                        <span className={"status-icon " + currentStatus} aria-label={currentStatus === 'up' ? 'status up' : 'status down'}>{currentStatus === 'up' ? '✔' : '✖'}</span>
+                        <span className="svc-row"><span className="svc-name">{s.name}</span>{s.port && <span className="port inline">{s.port}</span>}</span>
+                      </button>
+                    )
+                  })}
                   {dockerSubset.length > 1 && h.id !== 'abra' && (
                     <div className="docker-group" aria-label={`Docker services (${dockerSubset.length})`} onClick={e => e.stopPropagation()}>
-                      {dockerSubset.map(s => (
-                        <button key={s.id} className="service dockerized"
-                          style={{ ['--service-color' as any]: categoryColors[s.category] }}
-                          onClick={e => { e.stopPropagation(); openService(h, s) }}>
-                          <span className={"status-icon " + (s.status || '')} aria-label={s.status === 'up' ? 'status up' : 'status down'}>{s.status === 'up' ? '✔' : '✖'}</span>
-                          <span className="svc-row"><span className="svc-name">{s.name}</span>{s.port && <span className="port inline">{s.port}</span>}</span>
-                        </button>
-                      ))}
+                      {dockerSubset.map(s => {
+                        const currentStatus = getServiceStatus(s)
+                        return (
+                          <button key={s.id} className="service dockerized"
+                            style={{ ['--service-color' as any]: categoryColors[s.category] }}
+                            onClick={e => { e.stopPropagation(); openService(h, s) }}>
+                            <span className={"status-icon " + currentStatus} aria-label={currentStatus === 'up' ? 'status up' : 'status down'}>{currentStatus === 'up' ? '✔' : '✖'}</span>
+                            <span className="svc-row"><span className="svc-name">{s.name}</span>{s.port && <span className="port inline">{s.port}</span>}</span>
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
-                  {(dockerSubset.length === 1 || h.id === 'abra') && dockerSubset.map(s => (
-                    <button key={s.id} className="service dockerized"
-                      style={{ ['--service-color' as any]: categoryColors[s.category] }}
-                      onClick={e => { e.stopPropagation(); openService(h, s) }}>
-                      <span className={"status-icon " + (s.status || '')} aria-label={s.status === 'up' ? 'status up' : 'status down'}>{s.status === 'up' ? '✔' : '✖'}</span>
-                      <span className="svc-row"><span className="svc-name">{s.name}</span>{s.port && <span className="port inline">{s.port}</span>}</span>
-                    </button>
-                  ))}
+                  {(dockerSubset.length === 1 || h.id === 'abra') && dockerSubset.map(s => {
+                    const currentStatus = getServiceStatus(s)
+                    return (
+                      <button key={s.id} className="service dockerized"
+                        style={{ ['--service-color' as any]: categoryColors[s.category] }}
+                        onClick={e => { e.stopPropagation(); openService(h, s) }}>
+                        <span className={"status-icon " + currentStatus} aria-label={currentStatus === 'up' ? 'status up' : 'status down'}>{currentStatus === 'up' ? '✔' : '✖'}</span>
+                        <span className="svc-row"><span className="svc-name">{s.name}</span>{s.port && <span className="port inline">{s.port}</span>}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )
@@ -186,69 +251,100 @@ function App() {
       {drawer.open && (
         <aside className="drawer" aria-label="Details sidebar">
           <button className="close-btn" onClick={closeDrawer} aria-label="Close details">×</button>
-          {drawer.host && !drawer.service && <HostDetails host={drawer.host} onOpenService={(s)=> setDrawer({ host: drawer.host, service: s, open: true })} />}
-          {drawer.host && drawer.service && <ServiceDetails host={drawer.host} service={drawer.service} />}
+          {drawer.host && !drawer.service && <HostDetails host={drawer.host} onOpenService={(s)=> setDrawer({ host: drawer.host, service: s, open: true })} getServiceStatus={getServiceStatus} />}
+          {drawer.host && drawer.service && <ServiceDetails host={drawer.host} service={drawer.service} getServiceStatus={getServiceStatus} />}
         </aside>
       )}
     </div>
   )
 }
 
-function Header() {
+function Header({ wsConnected, lastUpdate }: { wsConnected: boolean, lastUpdate: number }) {
+  const formatLastUpdate = () => {
+    if (!lastUpdate) return 'Never'
+    const now = Date.now()
+    const diff = now - lastUpdate
+    if (diff < 60000) return `${Math.floor(diff / 1000)}s ago`
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+    return new Date(lastUpdate).toLocaleTimeString()
+  }
+
   return (
     <header className="app-header">
-      <h1>IAES Stoplight Chart</h1>
-      <p className="subtitle">Click a host or individual service for details.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div>
+          <h1>IAES Stoplight Chart</h1>
+          <p className="subtitle">Click a host or individual service for details.</p>
+        </div>
+        <div style={{ fontSize: '.65rem', color: 'var(--muted)', textAlign: 'right' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+            <span style={{ 
+              width: '8px', 
+              height: '8px', 
+              borderRadius: '50%', 
+              backgroundColor: wsConnected ? '#48d176' : '#ff6b6b',
+              display: 'inline-block'
+            }}></span>
+            {wsConnected ? 'Live monitoring' : 'Offline'}
+          </div>
+          <div>Last update: {formatLastUpdate()}</div>
+        </div>
+      </div>
     </header>
   )
 }
 
-const HostDetails = ({ host, onOpenService }: { host: HostNode, onOpenService: (s: Service)=>void }) => (
+const HostDetails = ({ host, onOpenService, getServiceStatus }: { host: HostNode, onOpenService: (s: Service)=>void, getServiceStatus: (s: Service) => 'up' | 'down' }) => (
   <div className="details">
     <h2>{host.name}</h2>
     <p className="muted">IP: {host.ip}</p>
     {host.notes && <p>{host.notes}</p>}
     <h3>Services</h3>
     <ul className="svc-list">
-      {host.services.map(s => (
-        <li key={s.id}
-          className={"svc-row-btn" + (s.dockerized ? ' docker' : '')}
-          role="button"
-          tabIndex={0}
-          onClick={() => onOpenService(s)}
-          onKeyDown={e => { if (e.key === 'Enter') onOpenService(s) }}
-          style={{ ['--svc-color' as any]: categoryColors[s.category], borderLeftColor: s.dockerized ? 'var(--cat-docker)' : categoryColors[s.category] }}>
-          <span className={"status-icon inline " + (s.status || '')} aria-label={s.status === 'up' ? 'status up' : 'status down'}>{s.status === 'up' ? '✔' : '✖'}</span>
-          <strong>{s.name}</strong> {s.port} <em className="cat-label" style={{ color: categoryColors[s.category] }}>{categoryLabels[s.category]}</em>
-          {s.dockerized && <span className="cat-label" style={{ color: 'var(--cat-docker)', marginLeft: '.35rem' }}>Docker</span>}
-          {s.description && <p className="svc-desc">{s.description}</p>}
-        </li>
-      ))}
+      {host.services.map(s => {
+        const currentStatus = getServiceStatus(s)
+        return (
+          <li key={s.id}
+            className={"svc-row-btn" + (s.dockerized ? ' docker' : '')}
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpenService(s)}
+            onKeyDown={e => { if (e.key === 'Enter') onOpenService(s) }}
+            style={{ ['--svc-color' as any]: categoryColors[s.category], borderLeftColor: s.dockerized ? 'var(--cat-docker)' : categoryColors[s.category] }}>
+            <span className={"status-icon inline " + currentStatus} aria-label={currentStatus === 'up' ? 'status up' : 'status down'}>{currentStatus === 'up' ? '✔' : '✖'}</span>
+            <strong>{s.name}</strong> {s.port} <em className="cat-label" style={{ color: categoryColors[s.category] }}>{categoryLabels[s.category]}</em>
+            {s.dockerized && <span className="cat-label" style={{ color: 'var(--cat-docker)', marginLeft: '.35rem' }}>Docker</span>}
+            {s.description && <p className="svc-desc">{s.description}</p>}
+          </li>
+        )
+      })}
     </ul>
   </div>
 )
 
-const ServiceDetails = ({ host, service }: { host: HostNode, service: Service }) => (
-  <div className="details">
-    <h2>{service.name}</h2>
-    <p className="muted">Host: {host.name} ({host.ip})</p>
-    <p><strong>Status:</strong> <span className={service.status === 'up' ? 'status-chip up' : 'status-chip down'}>{service.status === 'up' ? '✔ Running' : '✖ Down'}</span></p>
-    <p><strong>Category:</strong> <span style={{ color: categoryColors[service.category] }}>{categoryLabels[service.category]}</span>{service.dockerized && service.id.startsWith('docker-group-') ? <> (Group)</> : service.dockerized ? <> (Container)</> : null}</p>
-    {service.description && (
+const ServiceDetails = ({ host, service, getServiceStatus }: { host: HostNode, service: Service, getServiceStatus: (s: Service) => 'up' | 'down' }) => {
+  const currentStatus = getServiceStatus(service)
+  return (
+    <div className="details">
+      <h2>{service.name}</h2>
+      <p className="muted">Host: {host.name} ({host.ip})</p>
+      <p><strong>Status:</strong> <span className={currentStatus === 'up' ? 'status-chip up' : 'status-chip down'}>{currentStatus === 'up' ? '✔ Running' : '✖ Down'}</span></p>
+      <p><strong>Category:</strong> <span style={{ color: categoryColors[service.category] }}>{categoryLabels[service.category]}</span>{service.dockerized && service.id.startsWith('docker-group-') ? <> (Group)</> : service.dockerized ? <> (Container)</> : null}</p>
+      {service.description && (
       <div className="detail-section">
         <h3>Overview</h3>
         <p>{service.description}</p>
       </div>
-    )}
-    {service.startup && (
+      )}
+      {service.startup && (
       <div className="detail-section">
         <h3>Startup Procedure</h3>
         <ol className="step-list">
           {service.startup.map((step,i)=>(<li key={i}>{step}</li>))}
         </ol>
       </div>
-    )}
-    {(service.configPath || service.logPath || service.notes) && (
+      )}
+      {(service.configPath || service.logPath || service.notes) && (
       <div className="detail-section">
         <h3>Paths & Notes</h3>
         <ul className="kv-list">
@@ -257,20 +353,20 @@ const ServiceDetails = ({ host, service }: { host: HostNode, service: Service })
             {service.notes && <li><strong>Notes:</strong> {service.notes}</li>}
         </ul>
       </div>
-    )}
-    {service.site && (
+      )}
+      {service.site && (
       <div className="detail-section">
         <h3>Website</h3>
         <p><a href={service.site} target="_blank" rel="noreferrer">Open Site ↗</a></p>
       </div>
-    )}
-    {service.docs && (
+      )}
+      {service.docs && (
       <div className="detail-section">
         <h3>Documentation</h3>
         <p><a href={service.docs} target="_blank" rel="noreferrer">Reference Docs ↗</a></p>
       </div>
-    )}
-    {service.id.startsWith('docker-group-') && (
+      )}
+      {service.id.startsWith('docker-group-') && (
       <>
         <h3>Included</h3>
         <ul className="svc-list">
@@ -282,8 +378,9 @@ const ServiceDetails = ({ host, service }: { host: HostNode, service: Service })
           ))}
         </ul>
       </>
-    )}
-  </div>
-)
+      )}
+    </div>
+  )
+}
 
 export default App
