@@ -39,7 +39,6 @@ def zeek(changed_files):
             # Execute Zeek analysis
             subprocess.run(command, check=True)
             print(f"Zeek analysis completed for {file}")
-            time.sleep(30)  # Wait for 30 seconds before next run
         except subprocess.CalledProcessError as e:
             # Handle any errors during Zeek execution
             print(f"Error running Zeek: {e}")
@@ -58,3 +57,6 @@ def main():
             # Run Zeek analysis on new files
             zeek(changed_files)
         time.sleep(1)  # Sleep before checking again
+
+if __name__ == "__main__":
+    main()

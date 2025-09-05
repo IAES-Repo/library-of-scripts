@@ -50,3 +50,6 @@ def main():
             print(f"Changed files detected: {changed_files}")
             suricata(changed_files)
         time.sleep(1)  # Sleep before checking again
+
+if __name__ == "__main__":
+    main()
