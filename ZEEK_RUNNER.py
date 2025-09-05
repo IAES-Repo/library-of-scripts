@@ -34,7 +34,7 @@ def zeek(changed_files):
     # Process each new file with Zeek
     for file in changed_files:
         # Build Zeek command with -r flag to read from file
-        command = ["zeek", "-r", file]
+        command = ["zeek", "-r", WATCH_DIRECTORY + "/" + file]
         try:
             # Execute Zeek analysis
             subprocess.run(command, check=True)

@@ -31,10 +31,11 @@ def suricata(changed_files):
     Run Suricata on the specified directory.
     """
     for file in changed_files:
-        command = ["suricata", "-r", file]
+        command = ["suricata", "-r", WATCH_DIRECTORY + "/" + file]
         try:
             subprocess.run(command, check=True)
             print(f"Suricata analysis completed for {file}")
+            time.sleep(30)  # Wait for 30 seconds before next run
         except subprocess.CalledProcessError as e:
             print(f"Error running Suricata: {e}")
 
