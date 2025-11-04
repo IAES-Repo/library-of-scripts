@@ -37,15 +37,27 @@ const hosts: HostNode[] = [
     name: 'Crash',
     ip: '10.129.47.227',
     services: [
-      { id: 'json-recv', name: 'JSON Receive Code', port: ':50000', category: 'ingestion', description: 'Receives JSON payloads from field modules.', status: 'up', startup: ['Ensure dependencies installed', 'Start service: systemctl start json-recv', 'Verify listening on :50000'], logPath: '/var/log/json-recv.log', configPath: '/etc/json-recv/config.yml', docs: '/docs/json-recv.md' },
-      { id: 'watch-tower', name: 'Watch Tower', category: 'ingestion', description: 'Monitoring / supervisory ingestion layer.', status: 'up', startup: ['systemctl start watchtower', 'Check health endpoint /health'], logPath: '/var/log/watchtower.log', docs: '/docs/watch-tower.md' },
-      { id: 'ndjson', name: 'NDJSON Script', category: 'processing', description: 'Parses newline-delimited JSON into structured events.', status: 'up', startup: ['python3 ndjson_consumer.py &'], configPath: '/opt/ndjson/config.ini', docs: '/docs/ndjson-script.md' },
-      { id: 'zeek', name: 'Zeek', category: 'processing', description: 'Network security monitoring system extracting metadata from traffic.', status: 'up', startup: ['zeekctl deploy', 'zeekctl status'], logPath: '/opt/zeek/logs/current/', docs: 'https://docs.zeek.org/' },
-      { id: 'suricata', name: 'Suricata', category: 'processing', description: 'IDS/IPS engine performing deep packet inspection.', status: 'up', startup: ['systemctl start suricata', 'suricata -T (config test)'], logPath: '/var/log/suricata/', configPath: '/etc/suricata/suricata.yaml', docs: 'https://docs.suricata.io/' },
-      { id: 'pcap-roll', name: 'PCAP Data Rollover', category: 'handling', description: 'Rotates PCAP capture files to NAS storage.', status: 'up', startup: ['cron handles rotation automatically'], notes: 'Check disk usage weekly.', docs: '/docs/pcap-rollover.md' },
-      { id: 'py-dash', name: 'Python Dashboard', category: 'handling', description: 'Custom analytics dashboard.', status: 'down', startup: ['pip install -r requirements.txt', 'python app.py'], logPath: '/var/log/py-dash/app.log', docs: '/docs/python-dashboard.md', site: 'https://dashboard.internal/' }
+      { id: 'stoplight-chart', name: 'Stoplight Chart', category: 'handling', description: 'Web UI for the Stoplight infrastructure diagram (Vite dev server / static site).', status: 'up', startup: ['npm run dev'], docs: '/docs/stoplight.md', site: 'http://10.129.47.227:5173' }
     ],
-    notes: 'Primary sensor & ingest host.'
+    notes: 'Host serving the Stoplight UI.'
+  },
+  {
+    id: 'fancybear',
+    name: 'FancyBear',
+    ip: '10.129.47.226',
+    services: [
+      { id: 'decap-script', name: 'Decap Script', category: 'ingestion', description: 'Decapsulates tunneled packets and prepares raw frames for processing.', status: 'up', startup: ['systemctl start decap-script'], logPath: '/var/log/decap.log', docs: '/docs/decap-script.md' },
+      { id: 'sensor-software', name: 'Sensor Software', category: 'ingestion', description: 'Sensor agent that captures traffic and forwards to local processors.', status: 'up', startup: ['systemctl start sensor'], logPath: '/var/log/sensor.log', docs: '/docs/sensor-software.md' },
+      { id: 'pre-processor', name: 'Pre Processor', category: 'processing', description: 'Cleans and enriches raw events before NDJSON conversion.', status: 'up', startup: ['systemctl start pre-processor'], configPath: '/etc/pre-processor/config.yml', docs: '/docs/pre-processor.md' },
+      { id: 'json-to-ndjson', name: 'JSON to NDJSON', category: 'processing', description: 'Transforms JSON payloads into newline-delimited NDJSON for downstream consumers.', status: 'up', startup: ['python3 json2ndjson.py'], docs: '/docs/json-to-ndjson.md' },
+      { id: 'box-monitor', name: 'Box Monitor', category: 'processing', description: 'Local watchdog that monitors processes, disk usage and custom sensors.', status: 'up', startup: ['systemctl start box-monitor'], logPath: '/var/log/box-monitor.log', docs: '/docs/box-monitor.md' },
+      { id: 'zeek', name: 'Zeek', category: 'ingestion', description: 'Network security monitoring system extracting metadata from traffic.', status: 'up', startup: ['zeekctl deploy', 'zeekctl status'], logPath: '/opt/zeek/logs/current/', docs: 'https://docs.zeek.org/' },
+      { id: 'suricata', name: 'Suricata', category: 'ingestion', description: 'IDS/IPS engine performing deep packet inspection.', status: 'up', startup: ['systemctl start suricata', 'suricata -T (config test)'], logPath: '/var/log/suricata/', configPath: '/etc/suricata/suricata.yaml', docs: 'https://docs.suricata.io/' },
+      { id: 'packet-beats', name: 'Packet Beats', category: 'ingestion', description: 'Lightweight packet shipper that forwards traffic metadata to the pipeline.', status: 'up', startup: ['systemctl start packet-beats'], docs: '/docs/packet-beats.md' },
+      { id: 'file-beats', name: 'File Beats', category: 'ingestion', description: 'Filebeat instance shipping logs and selected PCAP artifacts to central store.', status: 'up', startup: ['systemctl start filebeat'], docs: '/docs/file-beats.md' },
+      { id: 'pcap-roll', name: 'PCAP Data Rollover', category: 'handling', description: 'Rotates PCAP capture files to NAS storage on a schedule and manages retention.', status: 'up', startup: ['cron handles rotation automatically'], notes: 'Monitor disk usage and retention policy.', docs: '/docs/pcap-rollover.md' }
+    ],
+    notes: 'Primary sensor & ingest host (renamed to FancyBear).'
   },
   {
     id: 'onix',

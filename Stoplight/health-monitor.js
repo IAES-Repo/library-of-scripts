@@ -7,24 +7,31 @@ const wss = new WebSocketServer({ port: 8081 });
 
 // Service configurations for health checking
 const services = [
+
+  // FancyBear services
+  { id: 'decap-script', host: '10.129.47.226', port: 9001, type: 'tcp' },
+  { id: 'sensor-software', host: '10.129.47.226', port: 9101, type: 'tcp' },
+  { id: 'pre-processor', host: '10.129.47.226', port: 9002, type: 'tcp' },
+  { id: 'json-to-ndjson', host: '10.129.47.226', port: 50001, type: 'tcp' },
+  { id: 'box-monitor', host: '10.129.47.226', port: 8085, type: 'http', path: '/status' },
+  { id: 'zeek', host: '10.129.47.226', port: 47760, type: 'tcp' },
+  { id: 'suricata', host: '10.129.47.226', port: 4789, type: 'tcp' },
+  { id: 'packet-beats', host: '10.129.47.226', port: 5045, type: 'tcp' },
+  { id: 'file-beats', host: '10.129.47.226', port: 5044, type: 'tcp' },
+  { id: 'pcap-roll', host: '10.129.47.226', port: 22, type: 'tcp' },
+
   // Crash services
-  { id: 'json-recv', host: '10.129.47.227', port: 50000, type: 'tcp' },
-  { id: 'watch-tower', host: '10.129.47.227', port: 8080, type: 'http', path: '/health' },
-  { id: 'ndjson', host: '10.129.47.227', port: 3000, type: 'tcp' },
-  { id: 'filebeats', host: '10.129.47.227', port: 5044, type: 'tcp' },
-  { id: 'zeek', host: '10.129.47.227', port: 47760, type: 'tcp' },
-  { id: 'suricata', host: '10.129.47.227', port: 4789, type: 'tcp' },
-  { id: 'py-dash', host: '10.129.47.227', port: 443, type: 'http', path: '/' },
-  
+  { id: 'stoplight-chart', host: '10.129.47.227', port: 5173, type: 'http', path: '/' },
+
   // Onix services (ELK stack)
   { id: 'logstash', host: '10.129.47.225', port: 5601, type: 'tcp' },
   { id: 'elastic', host: '10.129.47.225', port: 9200, type: 'http', path: '/' },
   { id: 'kibana', host: '10.129.47.225', port: 443, type: 'http', path: '/' },
-  
+
   // Abra services
   { id: 'glpi', host: '10.129.47.230', port: 443, type: 'http', path: '/' },
   { id: 'opencti', host: '10.129.47.230', port: 8443, type: 'http', path: '/health' },
-  
+
   // NAS services
   { id: 'pcap-store', host: '10.129.47.231', port: 21, type: 'tcp' },
   { id: 'db-store', host: '10.129.47.232', port: 21, type: 'tcp' }
